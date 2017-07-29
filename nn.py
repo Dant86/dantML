@@ -45,3 +45,10 @@ class Feed_Forward:
             index or a vector of gold labels
         '''
         return self.loss(logits, labels)
+
+
+    def train(self, X, Y, epochs=90, learn_rate=0.001):
+        for example, gold in zip(X, Y):
+            prediction = self.make_prediction(example)
+            loss = self.calculate_loss(prediction, gold)
+            #TODO: calculus
