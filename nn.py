@@ -15,11 +15,11 @@ class Feed_Forward:
         self.output_size = output_size
         self.hidden_size = hidden_size
         self.weights_1 = np.zeros((hidden_size, input_size))
-        self.biases_1 = np.zeros((hidden_size, 1))
+        self.biases_1 = np.ones((hidden_size, 1))
         self.weights_2 = np.zeros((hidden_size, hidden_size))
-        self.biases_2 = np.zeros((hidden_size, 1))
+        self.biases_2 = np.ones((hidden_size, 1))
         self.weights_3 = np.zeros((output_size, hidden_size))
-        self.biases_3 = np.zeros((output_size, 1))
+        self.biases_3 = np.ones((output_size, 1))
         self.loss = loss
         self.activation = activation
 
@@ -35,7 +35,7 @@ class Feed_Forward:
         layer_2 = self.activation(dot_2 + self.biases_2)
         dot_3 = np.dot(self.weights_3, layer_2)
         out = self.activation(dot_3 + self.biases_3)
-        return softmax(out)
+        return layer_1, layer_2, softmax(out)
 
 
     def calculate_loss(self, logits, labels):
@@ -48,7 +48,24 @@ class Feed_Forward:
 
 
     def train(self, X, Y, epochs=90, learn_rate=0.001):
-        for example, gold in zip(X, Y):
-            prediction = self.make_prediction(example)
-            loss = self.calculate_loss(prediction, gold)
-            #TODO: calculus
+        '''
+            stochastic optimization
+        '''
+        for i in range(epochs):
+            for example, gold in zip(X, Y):
+                l1, l2, prediction = self.make_prediction(example)
+                loss = self.calculate_loss(prediction, gold)
+                #TODO: calculus
+                #TODO: figure out advanced optimization
+                #techniques, but use grad_desc for now
+                output_delta = loss*self.activation(prediction, deriv=True)
+                l2_err = self.weights_3.dot(output_delta)
+                l2_delta = l2_err*self.activation(self.weights_2, deriv=True)
+                l1_err = self.weights_2.dot(l2_delta)
+                l1_delta = l1_err*self.activation(self.weigths_1, deriv=True)
+
+                self.weights_3 += l2.dot(output_delta)
+                self.weights_2 += l1.dot(l2_delta)
+                self.weights_1 += example.dot(l1_delta)
+
+                

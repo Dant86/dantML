@@ -8,4 +8,4 @@ def crossentropy(logits, labels):
 		curr += labels[i]*math.log(logits[i])
 		curr += (1-labels[i])*math.log(1-logits[i])
 		sum += curr
-	return -sum
+	return -sum / len(logits)
