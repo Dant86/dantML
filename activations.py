@@ -7,7 +7,7 @@ def tanh(x):
 	return np.tanh(x)
 
 def relu(x):
-	return np.max(0,x)
+	return np.maximum(0,x)
 
 def softmax(x):
 	denom = sum([np.exp(logit) for logit in x])
