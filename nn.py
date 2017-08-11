@@ -2,11 +2,12 @@ from losses import *
 from activations import *
 import numpy as np
 
+
 class Feed_Forward:
 
 
     def __init__(self, input_size, output_size, hidden_size=100,
-                 loss=crossentropy, activation=relu):
+                 loss=crossentropy, activation=sigmoid):
         '''
             Initializes a simple 2-layer feed forward
             neural network, given the input and output sizes
@@ -14,28 +15,24 @@ class Feed_Forward:
         self.input_size = input_size
         self.output_size = output_size
         self.hidden_size = hidden_size
-        self.weights_1 = np.zeros((hidden_size, input_size))
-        self.biases_1 = np.ones((hidden_size, 1))
-        self.weights_2 = np.zeros((hidden_size, hidden_size))
-        self.biases_2 = np.ones((hidden_size, 1))
-        self.weights_3 = np.zeros((output_size, hidden_size))
-        self.biases_3 = np.ones((output_size, 1))
+        self.w1 = np.random.randn(hidden_size, input_size)
+        self.b1 = np.zeros((hidden_size, 1))
+        self.w2 = np.random.randn(output_size, hidden_size)
+        self.b2 = np.zeros((output_size, 1))
         self.loss = loss
         self.activation = activation
 
 
-    def make_prediction(self, feature_vec):
+    def predict(self, feature_vec, train=False):
         '''
             Given a feature vector, this function computes the
             output of the feed-forward network
         '''
-        dot_1 = np.dot(self.weights_1, feature_vec)
-        layer_1 = self.activation(dot_1 + self.biases_1)
-        dot_2 = np.dot(self.weights_2, layer_1)
-        layer_2 = self.activation(dot_2 + self.biases_2)
-        dot_3 = np.dot(self.weights_3, layer_2)
-        out = self.activation(dot_3 + self.biases_3)
-        return layer_1, layer_2, softmax(out)
+        z1 = self.w1.dot(feature_vec) + self.b1
+        a1 = self.activation(z1)
+        z2 = self.w2.dot(a1) + self.b2
+        yhat = self.activation(z2)
+        return yhat
 
 
     def calculate_loss(self, logits, labels):
@@ -47,25 +44,24 @@ class Feed_Forward:
         return self.loss(logits, labels)
 
 
-    def train(self, X, Y, epochs=90, learn_rate=0.001):
+    def train_fullBatch(self, X, Y, epochs=90000, learn_rate=0.005):
         '''
-            stochastic optimization
+            full batch optimization
         '''
+        m = len(X[0])
         for i in range(epochs):
-            for example, gold in zip(X, Y):
-                l1, l2, prediction = self.make_prediction(example)
-                loss = self.calculate_loss(prediction, gold)
-                #TODO: calculus
-                #TODO: figure out advanced optimization
-                #techniques, but use grad_desc for now
-                output_delta = loss*self.activation(prediction, deriv=True)
-                l2_err = self.weights_3.dot(output_delta)
-                l2_delta = l2_err*self.activation(self.weights_2, deriv=True)
-                l1_err = self.weights_2.dot(l2_delta)
-                l1_delta = l1_err*self.activation(self.weigths_1, deriv=True)
-
-                self.weights_3 += l2.dot(output_delta)
-                self.weights_2 += l1.dot(l2_delta)
-                self.weights_1 += example.dot(l1_delta)
-
-                
+            z1 = self.w1.dot(X) + self.b1
+            a1 = self.activation(z1)
+            z2 = self.w2.dot(a1) + self.b2
+            yhat = self.activation(z2)
+            print(self.loss(yhat, Y))
+            dz2 = yhat - Y
+            dw2 = (1 / m) * dz2.dot(a1.T)
+            db2 = (1 / m) * np.sum(dz2, axis=1, keepdims=True)
+            dz1 = (self.w2.T).dot(dz2) * sigmoid(a1, deriv=True)
+            dw1 = (1 / m) * dz1.dot(X.T)
+            db1 = (1 / m) * np.sum(dz1, axis=1, keepdims=True)
+            self.w1 -= (learn_rate * dw1)
+            self.w2 -= (learn_rate * dw2)
+            self.b1 -= (learn_rate * db1)
+            self.b2 -= (learn_rate * db2)

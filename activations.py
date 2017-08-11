@@ -2,8 +2,8 @@ import numpy as np
 
 def sigmoid(x, deriv=False):
     if deriv:
-        return sigmoid(x) / (1 - sigmoid(x))
-    return 1 / 1 + np.exp(-x)
+        return x * (1 - x)
+    return 1 / (1 + np.exp(-x))
 
 def tanh(x, deriv=False):
     if deriv:
@@ -14,7 +14,7 @@ def relu(x, deriv=False):
     if deriv:
         res = np.zeros(np.shape(x))
         for i in range(len(x)):
-            for j in range(len(x[i]))
+            for j in range(len(x[i])):
                 if x[i][j] > 0:
                     res[i][j] = 1
         return res
