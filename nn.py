@@ -89,7 +89,7 @@ class Feed_Forward:
                 self.b2 -= (learn_rate * db2)
 
 
-    # TODO: Momentum, RMSProp, Adam optimizers
+    # TODO: Momentum, RMSProp
     def Gradient_Descent_with_momentum(self, X, Y, epochs=90000, learn_rate=0.005, batch_size=0):
         pass
 
