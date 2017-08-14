@@ -4,7 +4,10 @@ import numpy as np
 
 
 class Feed_Forward:
-
+    '''
+        Simple 2-layer neural network
+        inputs and outputs must be of shape (num_features, num_examples)
+    '''
 
     def __init__(self, input_size, output_size, hidden_size=100,
                  loss=crossentropy, activation=sigmoid):
@@ -44,7 +47,7 @@ class Feed_Forward:
         '''
         return self.loss(logits, labels)
 
-    def batch(x_vals, y_vals, batch_size):
+    def batch(self, x_vals, y_vals, batch_size):
         '''
             Split list of feature vectors and labels into batches
             of relatively equal size. Last batch not guaranteed to
@@ -65,7 +68,7 @@ class Feed_Forward:
         '''
         if(batch_size == 0):
             batch_size = len(X)
-        X_batches, Y_batches = batch(X, Y, batch_size)
+        X_batches, Y_batches = self.batch(X, Y, batch_size)
         m = len(X[0])
         for i in range(epochs):
             for X, Y in zip(X_batches, Y_batches):
@@ -87,11 +90,14 @@ class Feed_Forward:
 
 
     # TODO: Momentum, RMSProp, Adam optimizers
-    # def RMSProp()
-    # Adam()
-    def Gradient_Descent_with_momentum(self, X, Y, ):
+    def Gradient_Descent_with_momentum(self, X, Y, epochs=90000, learn_rate=0.005, batch_size=0):
         pass
 
+    def RMSProp(self, X, Y, epochs=90000, learn_rate=0.005, batch_size=0):
+        pass
+
+    def Adam(self, X, Y, epochs=90000, learn_rate=0.005, batch_size=0):
+        pass
 
 
 
