@@ -20,6 +20,7 @@ input_size = 2
 output_size = 2
 hidden_size = 5
 net = Feed_Forward(input_size, output_size, hidden_size=hidden_size)
-net.train_fullBatch(xor_inputs, xor_outputs)
+#Full batch gradient descent
+net.Gradient_Descent(xor_inputs, xor_outputs)
 
 print(net.predict(xor_inputs).T)
