@@ -60,18 +60,18 @@ class Feed_Forward:
             y_batches.append(y_vals[:,i:i+batch_size])
         return x_batches, y_batches
 
-    def Gradient_Descent(self, X, Y, epochs=90000, learn_rate=0.005, batch_size=0):
+    def Gradient_Descent(self, X_vals, Y_vals, epochs=90000, learn_rate=0.005, batch_size=0):
         '''
             full batch optimization
             X must be of size (num_features, num_examples).
             Works with full batch, mini batch, and stochastic.
         '''
         if(batch_size == 0):
-            batch_size = len(X)
-        X_batches, Y_batches = self.batch(X, Y, batch_size)
-        m = len(X[0])
+            batch_size = len(X_vals[0])
+        X_batches, Y_batches = self.batch(X_vals, Y_vals, batch_size)
         for i in range(epochs):
             for X, Y in zip(X_batches, Y_batches):
+                m = len(X[0])
                 z1 = self.w1.dot(X) + self.b1
                 a1 = self.activation(z1)
                 z2 = self.w2.dot(a1) + self.b2
@@ -96,8 +96,46 @@ class Feed_Forward:
     def RMSProp(self, X, Y, epochs=90000, learn_rate=0.005, batch_size=0):
         pass
 
-    def Adam(self, X, Y, epochs=90000, learn_rate=0.005, batch_size=0):
-        pass
+    def Adam(self, X_vals, Y_vals, epochs=90000, learn_rate=0.005, beta1=0.9,
+             beta2 = 0.9, batch_size=0):
+        if(batch_size == 0):
+            batch_size = len(X_vals[0])
+        X_batches, Y_batches = self.batch(X_vals, Y_vals, batch_size)
+        VdW1 = np.zeros(self.w1.shape)
+        SdW1 = np.zeros(self.w1.shape)
+        VdW2 = np.zeros(self.w2.shape)
+        SdW2 = np.zeros(self.w2.shape)
+        Vdb1 = np.zeros(self.b1.shape)
+        Sdb1 = np.zeros(self.b1.shape)
+        Vdb2 = np.zeros(self.b2.shape)
+        Sdb2 = np.zeros(self.b2.shape)
+        for i in range(epochs):
+            for X, Y in zip(X_batches, Y_batches):
+                m = len(X[0])
+                z1 = self.w1.dot(X) + self.b1
+                a1 = self.activation(z1)
+                z2 = self.w2.dot(a1) + self.b2
+                yhat = self.activation(z2)
+                dz2 = yhat - Y
+                dw2 = (1 / m) * dz2.dot(a1.T)
+                db2 = (1 / m) * np.sum(dz2, axis=1, keepdims=True)
+                dz1 = (self.w2.T).dot(dz2) * sigmoid(a1, deriv=True)
+                dw1 = (1 / m) * dz1.dot(X.T)
+                db1 = (1 / m) * np.sum(dz1, axis=1, keepdims=True)
+                VdW1 = (beta1 * VdW1) + ((1 - beta1) * dw1)
+                VdW2 = (beta1 * VdW2) + ((1 - beta1) * dw2)
+                Vdb1 = (beta1 * Vdb1) + ((1 - beta1) * db1)
+                Vdb2 = (beta1 * Vdb2) + ((1 - beta1) * db2)
+                SdW1 = (beta2 * SdW1) + ((1 - beta2) * (dw1 ** 2))
+                SdW2 = (beta2 * SdW2) + ((1 - beta2) * (dw2 ** 2))
+                Sdb1 = (beta2 * Sdb1) + ((1 - beta2) * (db1 ** 2))
+                Sdb2 = (beta2 * Sdb2) + ((1 - beta2) * (db2 ** 2))
+                self.w1 -= learn_rate * (VdW1 / (SdW1 ** (1/2)))
+                self.w2 -= learn_rate * (VdW2 / (SdW2 ** (1/2)))
+                self.b1 -= learn_rate * (Vdb1 / (Sdb1 ** (1/2)))
+                self.b2 -= learn_rate * (Vdb2 / (Sdb2 ** (1/2)))
+                if(self.loss(yhat, Y) < (1 * (10**(-9)))):
+                    return
 
 
 
