@@ -20,6 +20,11 @@ def relu(x, deriv=False):
         return res
     return np.maximum(0,x)
 
+def linear(x, deriv=False):
+    if deriv:
+        return np.ones(x.shape)
+    return x
+
 def softmax(x, deriv=False):
     denom = sum([np.exp(logit) for logit in x])
     return np.exp(x) / denom
