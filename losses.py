@@ -1,5 +1,4 @@
 import numpy as np
-import math
 
 def crossentropy(yhat, y):
 	m = len(y[0])
@@ -10,5 +9,4 @@ def crossentropy(yhat, y):
 	return cost
 
 def sq_err(yhat, y):
-	m = len(y[0])
 	return (yhat - y) ** 2

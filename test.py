@@ -32,7 +32,6 @@ output_size = 2
 hidden_size = 5
 
 # This initializes a neural network. Very simple.
-# Note that the default hidden size is 100 neurons.
-net = Feed_Forward(input_size, output_size, hidden_size=hidden_size)
+net = Feed_Forward(input_size, output_size, hidden_size, 20)
 net.Adam(xor_inputs, xor_outputs)
-print(net.predict(xor_inputs).T)
+# print(net.make_prediction(xor_inputs))

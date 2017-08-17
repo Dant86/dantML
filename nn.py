@@ -1,58 +1,54 @@
-from losses import *
-from activations import *
 import numpy as np
-
+from activations import *
+from losses import *
 
 class Feed_Forward:
-    '''
-        Simple 2-layer neural network
-        inputs and outputs must be of shape (num_features, num_examples)
-    '''
 
-    def __init__(self, input_size, output_size, hidden_size=100,
-                 loss=crossentropy, activation=sigmoid):
-        '''
-            Initializes a simple 2-layer feed forward
-            neural network, given the input and output sizes
-        '''
-        self.input_size = input_size
-        self.output_size = output_size
-        self.hidden_size = hidden_size
-        self.w1 = np.random.randn(hidden_size, input_size)
-        self.b1 = np.zeros((hidden_size, 1))
-        self.w2 = np.random.randn(output_size, hidden_size)
-        self.b2 = np.zeros((output_size, 1))
-        self.loss = loss
+
+    def __init__(self, in_size, out_size, hid_size, amt_hid,
+                 activation=sigmoid, loss=crossentropy):
+        self.in_neurons = in_size
+        self.out_neurons = out_size
+        self.hid_neurons = hid_size
+        self.amt_hid_layers = amt_hid
         self.activation = activation
+        self.loss = crossentropy
+        self.parameters = {}
+        self.parameters["w1"] = np.random.randn(self.hid_neurons,
+                                                self.in_neurons)
+        self.parameters["b1"] = np.zeros((self.hid_neurons, 1))
+        for i in range(2, self.amt_hid_layers+1):
+            self.parameters["w"+str(i)] = np.random.randn(self.hid_neurons,
+                                                          self.hid_neurons)
+            self.parameters["b"+str(i)] = np.zeros((self.hid_neurons, 1))
+        self.parameters["w"+str(self.amt_hid_layers+1)] = np.random.randn(self.out_neurons,
+                                                                          self.hid_neurons)
+        self.parameters["b"+str(self.amt_hid_layers+1)] = np.zeros((self.out_neurons, 1))
 
 
-    def predict(self, feature_vec, train=False):
-        '''
-            Given a feature vector, this function computes the
-            output of the feed-forward network
-            feature_vec must be of size (num_features, num_examples)
-        '''
-        z1 = self.w1.dot(feature_vec) + self.b1
-        a1 = self.activation(z1)
-        z2 = self.w2.dot(a1) + self.b2
-        yhat = self.activation(z2)
-        return yhat
+    def get_cache(self, x_val):
+        cache = {}
+        cache["x"] = x_val
+        cache["z1"] = self.parameters["w1"].dot(x_val) + self.parameters["b1"]
+        cache["a1"] = self.activation(cache["z1"])
+        for i in range(2, self.amt_hid_layers+2):
+            cache["z"+str(i)] = self.parameters["w"+str(i)].dot(cache["a"+str(i-1)]) + self.parameters["b"+str(i)]
+            cache["a"+str(i)] = self.activation(cache["z"+str(i)])
+        return cache
 
 
-    def calculate_loss(self, logits, labels):
-        '''
-            Given a set of logits produced by the feed-forward
-            network and, depending on the loss type, either an
-            index or a vector of gold labels
-        '''
-        return self.loss(logits, labels)
+    def make_prediction(self, x_val):
+        cache = {}
+        cache["x"] = x_val
+        cache["z1"] = self.parameters["w1"].dot(x_val) + self.parameters["b1"]
+        cache["a1"] = self.activation(cache["z1"])
+        for i in range(2, self.amt_hid_layers+2):
+            cache["z"+str(i)] = self.parameters["w"+str(i)].dot(cache["a"+str(i-1)]) + self.parameters["b"+str(i)]
+            cache["a"+str(i)] = self.activation(cache["z"+str(i)])
+        return cache["a"+str(self.amt_hid_layers+1)]
+
 
     def batch(self, x_vals, y_vals, batch_size):
-        '''
-            Split list of feature vectors and labels into batches
-            of relatively equal size. Last batch not guaranteed to
-            be of length batch_size (probably less).
-        '''
         x_batches = []
         y_batches = []
         for i in range(0, len(x_vals[0]), batch_size):
@@ -60,86 +56,62 @@ class Feed_Forward:
             y_batches.append(y_vals[:,i:i+batch_size])
         return x_batches, y_batches
 
-    def Gradient_Descent(self, X_vals, Y_vals, epochs=90000, learn_rate=0.005, batch_size=0):
-        '''
-            full batch optimization
-            X must be of size (num_features, num_examples).
-            Works with full batch, mini batch, and stochastic.
-        '''
+
+    def calculate_derivatives(self, cache, y):
+        m = len(y[0])
+        derivs = {}
+        derivs["dz"+str(self.amt_hid_layers+1)] = cache["a"+str(self.amt_hid_layers+1)] - y
+        derivs["dw"+str(self.amt_hid_layers+1)] = (1 / m) * derivs["dz"+str(self.amt_hid_layers+1)].dot(cache["a"+str(self.amt_hid_layers)].T)
+        derivs["db"+str(self.amt_hid_layers+1)] = (1 / m) * np.sum(derivs["dz"+str(self.amt_hid_layers+1)], axis=1, keepdims=True)
+        for i in range(self.amt_hid_layers, 1, -1):
+            derivs["dz"+str(i)] = self.parameters["w"+str(i+1)].T.dot(derivs["dz"+str(i+1)]) * self.activation(cache["a"+str(i)], deriv=True)
+            derivs["dw"+str(i)] = (1 / m) * derivs["dz"+str(i)].dot(cache["a"+str(i-1)].T)
+            derivs["db"+str(i)] = (1 / m) *  np.sum(derivs["dz"+str(i)], axis=1, keepdims=True)
+        derivs["dz1"] = self.parameters["w2"].T.dot(derivs["dz2"]) * self.activation(cache["a1"], deriv=True)
+        derivs["dw1"] = (1 / m) * derivs["dz1"].dot(cache["x"].T)
+        derivs["db1"] = (1 / m) * np.sum(derivs["dz1"], axis=1, keepdims=True)
+        return derivs
+
+
+    def update_parameters(self, derivs, learn_rate):
+        for i in range(1, self.amt_hid_layers+1):
+            self.parameters["w"+str(i)] -= learn_rate * derivs["dw"+str(i)]
+            self.parameters["b"+str(i)] -= learn_rate * derivs["db"+str(i)]
+
+
+    def SGD(self, X_vals, Y_vals, epochs=90000, learn_rate=0.08, batch_size=0):
         if(batch_size == 0):
             batch_size = len(X_vals[0])
         X_batches, Y_batches = self.batch(X_vals, Y_vals, batch_size)
         for i in range(epochs):
             for X, Y in zip(X_batches, Y_batches):
-                m = len(X[0])
-                z1 = self.w1.dot(X) + self.b1
-                a1 = self.activation(z1)
-                z2 = self.w2.dot(a1) + self.b2
-                yhat = self.activation(z2)
-                print(self.loss(yhat, Y))
-                dz2 = yhat - Y
-                dw2 = (1 / m) * dz2.dot(a1.T)
-                db2 = (1 / m) * np.sum(dz2, axis=1, keepdims=True)
-                dz1 = (self.w2.T).dot(dz2) * sigmoid(a1, deriv=True)
-                dw1 = (1 / m) * dz1.dot(X.T)
-                db1 = (1 / m) * np.sum(dz1, axis=1, keepdims=True)
-                self.w1 -= (learn_rate * dw1)
-                self.w2 -= (learn_rate * dw2)
-                self.b1 -= (learn_rate * db1)
-                self.b2 -= (learn_rate * db2)
+                cache = self.get_cache(X)
+                print(self.loss(cache["a"+str(self.amt_hid_layers+1)], Y))
+                derivs = self.calculate_derivatives(cache, Y)
+                self.update_parameters(derivs, learn_rate)
 
 
-    # TODO: Momentum, RMSProp
-    def Gradient_Descent_with_momentum(self, X, Y, epochs=90000, learn_rate=0.005, batch_size=0):
-        pass
-
-    def RMSProp(self, X, Y, epochs=90000, learn_rate=0.005, batch_size=0):
-        pass
-
-    def Adam(self, X_vals, Y_vals, epochs=90000, learn_rate=0.005, beta1=0.9,
-             beta2 = 0.9, batch_size=0):
+    def Adam(self, X_vals, Y_vals, epochs=90000, learn_rate=0.005, batch_size=0,
+             beta1 = 0.9, beta2 = 0.9):
+        v = {}
+        s = {}
+        for param in self.parameters.keys():
+            v["d"+param] = np.zeros(self.parameters[param].shape)
+            s["d"+param] = np.zeros(self.parameters[param].shape)
         if(batch_size == 0):
             batch_size = len(X_vals[0])
         X_batches, Y_batches = self.batch(X_vals, Y_vals, batch_size)
-        VdW1 = np.zeros(self.w1.shape)
-        SdW1 = np.zeros(self.w1.shape)
-        VdW2 = np.zeros(self.w2.shape)
-        SdW2 = np.zeros(self.w2.shape)
-        Vdb1 = np.zeros(self.b1.shape)
-        Sdb1 = np.zeros(self.b1.shape)
-        Vdb2 = np.zeros(self.b2.shape)
-        Sdb2 = np.zeros(self.b2.shape)
         for i in range(epochs):
             for X, Y in zip(X_batches, Y_batches):
-                m = len(X[0])
-                z1 = self.w1.dot(X) + self.b1
-                a1 = self.activation(z1)
-                z2 = self.w2.dot(a1) + self.b2
-                yhat = self.activation(z2)
-                dz2 = yhat - Y
-                dw2 = (1 / m) * dz2.dot(a1.T)
-                db2 = (1 / m) * np.sum(dz2, axis=1, keepdims=True)
-                dz1 = (self.w2.T).dot(dz2) * sigmoid(a1, deriv=True)
-                dw1 = (1 / m) * dz1.dot(X.T)
-                db1 = (1 / m) * np.sum(dz1, axis=1, keepdims=True)
-                VdW1 = (beta1 * VdW1) + ((1 - beta1) * dw1)
-                VdW2 = (beta1 * VdW2) + ((1 - beta1) * dw2)
-                Vdb1 = (beta1 * Vdb1) + ((1 - beta1) * db1)
-                Vdb2 = (beta1 * Vdb2) + ((1 - beta1) * db2)
-                SdW1 = (beta2 * SdW1) + ((1 - beta2) * (dw1 ** 2))
-                SdW2 = (beta2 * SdW2) + ((1 - beta2) * (dw2 ** 2))
-                Sdb1 = (beta2 * Sdb1) + ((1 - beta2) * (db1 ** 2))
-                Sdb2 = (beta2 * Sdb2) + ((1 - beta2) * (db2 ** 2))
-                self.w1 -= learn_rate * (VdW1 / (SdW1 ** (1/2)))
-                self.w2 -= learn_rate * (VdW2 / (SdW2 ** (1/2)))
-                self.b1 -= learn_rate * (Vdb1 / (Sdb1 ** (1/2)))
-                self.b2 -= learn_rate * (Vdb2 / (Sdb2 ** (1/2)))
-                if(self.loss(yhat, Y) < (1 * (10**(-9)))):
-                    return
-
-
-
-
-
-
-
+                cache = self.get_cache(X)
+                print(self.loss(cache["a"+str(self.amt_hid_layers+1)], Y))
+                derivs = self.calculate_derivatives(cache, Y)
+                for deriv in derivs.keys():
+                    if "z" not in deriv:
+                        v[deriv] = (beta1 * v[deriv]) + ((1 - beta1) * derivs[deriv])
+                        s[deriv] = (beta2 * s[deriv]) + ((1 - beta2) * (derivs[deriv]) ** 2)
+                updates = {}
+                for deriv in derivs.keys():
+                    if "z" not in deriv:
+                        updates[deriv] = (v[deriv] / (s[deriv] ** (1 / 2)))
+                self.update_parameters(updates, learn_rate)
